@@ -31,7 +31,7 @@ namespace LesLegends
         }
     }
 
-    [PluginConfig("姬友传说", "EveningTwilight", "1.0.9")]
+    [PluginConfig("姬友传说", "EveningTwilight", "1.1.0")]
     public class LesLegends : TaiwuRemakePlugin
     {
         static Harmony harmony;
@@ -40,6 +40,7 @@ namespace LesLegends
         static bool closeFriendFixBisexual = false;     // 太吾和谷中密友同性且为双性恋
         static bool presetNPCFixBisexual = false;       // 隐秘小村NPC为双性恋(仅太吾与太吾性别相同时)
         static bool keepVirginity = false;              // 保持纯洁
+        static bool forceSexualRateForAll = false;      // 新生儿概率调整对所有NPC生效
         static int fixMotherType = 0;                   // 固定太吾为母亲? 0:随机 1:太吾 2:!太吾
         static bool sameSexualFromParents = false;      // 同性父母子女性别相同
         static bool bisexualFromParents = false;        // 双性恋子女必双性恋
@@ -52,8 +53,7 @@ namespace LesLegends
         public static bool pregnantLockProtect;         // 怀孕锁红字保护
         /// </summary>
 
-        // static bool forceSexualRateForAll = false;      // 新生儿概率调整对所有NPC生效
-        // static bool forceBisexualAsSame = false;        // 强制双性恋为同性恋(暂不支持)
+        // static bool forceBisexualAsSame = false;        // 强制双性恋为同性恋(暂不支持)(好像现在就是同，不考虑x生y相的话，没有双[那可真是太棒了])
 
         public override void Dispose()
         {
@@ -67,7 +67,7 @@ namespace LesLegends
         public override void Initialize()
         {
             Logger.DebugLog($"[LesLegends] Initialize");
-            readSettings();
+            ReadSettings();
 
             harmony ??= new Harmony(base.GetGuid());
             harmony.PatchAll(typeof(LesLegends));
@@ -76,10 +76,12 @@ namespace LesLegends
             harmony.PatchAll(typeof(PregnantLockProtectTranspiler));
         }
 
-        public void readSettings()
+        public void ReadSettings()
         {
             DomainManager.Mod.GetSetting(ModIdStr, "closeFriendFixBisexual", ref closeFriendFixBisexual);
             DomainManager.Mod.GetSetting(ModIdStr, "presetNPCFixBisexual", ref presetNPCFixBisexual);
+            DomainManager.Mod.GetSetting(ModIdStr, "keepVirginity", ref keepVirginity);
+            DomainManager.Mod.GetSetting(ModIdStr, "forceSexualRateForAll", ref forceSexualRateForAll);
             DomainManager.Mod.GetSetting(ModIdStr, "fixMotherType", ref fixMotherType);
             DomainManager.Mod.GetSetting(ModIdStr, "sameSexualFromParents", ref sameSexualFromParents);
             DomainManager.Mod.GetSetting(ModIdStr, "bisexualFromParents", ref bisexualFromParents);
@@ -99,7 +101,9 @@ namespace LesLegends
             newBornsBisexualRate = MathUtils.Clamp(newBornsBisexualRate, 0, 100);
 
             Logger.DebugLog(string.Format("[LesLegends] {0}启用谷中密友与太吾同性别", closeFriendFixBisexual ? "已" : "未"));
-            Logger.DebugLog(string.Format("[LesLegends] {0}启用隐秘小村同性别NPC为双性恋", closeFriendFixBisexual ? "已" : "未"));
+            Logger.DebugLog(string.Format("[LesLegends] {0}启用隐秘小村同性别NPC为双性恋", presetNPCFixBisexual ? "已" : "未"));
+            Logger.DebugLog(string.Format("[LesLegends] {0}启用不破神功绝不破身", keepVirginity ? "已" : "未"));
+            Logger.DebugLog(string.Format("[LesLegends] {0}启用新生儿概率调整对所有NPC生效", forceSexualRateForAll ? "已" : "未"));
             Logger.DebugLog(string.Format("[LesLegends] 怀孕对象指定:{0}", fixMotherType));
             Logger.DebugLog(string.Format("[LesLegends] {0}启用同性生殖固定性别", sameSexualFromParents ? "已" : "未"));
             Logger.DebugLog(string.Format("[LesLegends] {0}启用双性恋取向继承", bisexualFromParents ? "已" : "未"));

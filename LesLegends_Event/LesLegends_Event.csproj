@@ -1,0 +1,91 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="0Harmony">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\The Scroll of Taiwu_Data\Managed\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="GameData">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Backend\GameData.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Redzen">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Backend\Redzen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="TaiwuModdingLib">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_CharacterInteraction_Main">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_CharacterInteraction_Main.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryChengDu">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryChengDu.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryDaLi">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryDaLi.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryFuZhou">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryFuZhou.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryGuangZhou">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryGuangZhou.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryGuiZhou">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryGuiZhou.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryHangZhou">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryHangZhou.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryJiangLing">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryJiangLing.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryJingCheng">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryJingCheng.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryLiaoYang">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryLiaoYang.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryQingZhou">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryQingZhou.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryQinZhou">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryQinZhou.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryShouChun">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryShouChun.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryTaiYuan">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryTaiYuan.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryXiangYang">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryXiangYang.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Taiwu_EventPackage_MarryYangZhou">
+      <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\Event\EventLib\Taiwu_EventPackage_MarryYangZhou.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
