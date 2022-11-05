@@ -4,10 +4,8 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Reflection;
 using TaiwuModdingLib.Core.Plugin;
-using UnityEngine;
 using Debug = UnityEngine.Debug;
-using GuiBaseUI;
-using UnityEngine.UI;
+using UnityEngine;
 
 namespace NewTaiwuModifier_Front
 {
@@ -32,7 +30,7 @@ namespace NewTaiwuModifier_Front
             /*harmony.PatchAll(typeof(NewTaiwuModifier_Front));*/
             harmony.PatchAll(typeof(TraitCostToZero));
             harmony.PatchAll(typeof(TraitCostNoZeroCheck));
-            /*harmony.PatchAll(typeof(NewGameModifierUI));*/
+            harmony.PatchAll(typeof(TaiwuFeatureLazyModifer));
         }
         public override void OnModSettingUpdate()
         {
@@ -119,81 +117,18 @@ namespace NewTaiwuModifier_Front
         }
     }
 
-/*    public static class TaiwuFeatureLazyModifer
+    public static class TaiwuFeatureLazyModifer
     {
         [HarmonyPostfix, HarmonyPatch(typeof(UI_NewGame), "Awake")]
         public static void UI_NewGame_Awake_Postfix()
         {
-            FeatureManager.Init();
-            FeatureManager.SetFilePath();
+            /*CharacterModifier.Init();*/
         }
-    }*/
 
-    /*public static class NewGameModifierUI
-    {
-        private static UI_MainView mainView;
-        private static CButton entryButton;
-        private static FeatureContainerView featureContainerView;
-
-        public static bool PrintFeatureItem(CharacterFeatureItem item)
+        [HarmonyPostfix, HarmonyPatch(typeof(UI_NewGame), "OnClickConfirmInscribedChar")]
+        public static void UI_NewGame_OnClickConfirmInscribedChar_Postfix()
         {
-            if (item != null)
-            {
-                string name = item.Name;
-                int TemplateId = item.TemplateId;
-                int CandidateGroupId = item.CandidateGroupId;
-                int MutexGroupId = item.MutexGroupId;
-                int level = item.Level;
-                bool isBasic = item.Basic;
-                int gender = item.Gender;
-                string desc = item.Desc;
-                Debug.Log(string.Format("[CharacterFeatureItem]\t{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}", name, TemplateId, CandidateGroupId, MutexGroupId, level, isBasic, gender, desc));
-            }
-            return true;
+            CharacterModifier.Show();
         }
-
-        [HarmonyPostfix, HarmonyPatch(typeof(UI_NewGame), "Awake")]
-        public static void UI_NewGame_Awake_Postfix()
-        {
-            Debug.Log("UI_NewGame_Awake_Postfix");
-            *//*if (featureContainerView == null)
-            {
-                Debug.Log("Create featureContainerView");
-                GameObject root = GameObject.Find("Camera_UIRoot/Canvas");
-                GameObject go = CreateUI.NewCanvas(int.MinValue);
-                go.layer = root.layer;
-                go.transform.SetParent(root.transform.Find("LayerVeryTop"), false);
-                featureContainerView = go.AddComponent<FeatureContainerView>();
-                featureContainerView.Init(root);
-
-            }
-            featureContainerView.gameObject.SetActive(true);*/
-            /*CharacterFeature.Instance.Iterate(PrintFeatureItem);*//*
-            if (mainView == null)
-            {
-                GameObject root = GameObject.Find("Camera_UIRoot/Canvas");
-                GameObject go = CreateUI.NewCanvas(int.MinValue);
-                go.layer = root.layer;
-                go.transform.SetParent(root.transform.Find("LayerVeryTop"), false);
-                mainView = go.AddComponent<UI_MainView>();
-                mainView.Init(root);
-            }
-            mainView.gameObject.SetActive(true);
-        }
-    }*/
-
-            /*public class UI_EntryButton : MonoBehaviour
-            {
-                private Image bg;
-
-                public void Init()
-                {
-                    CToggle toggle = GetComponent<CToggle>();
-                }
-
-                private void OnGUI()
-                {
-
-                }
-            }*/
+    }
 }

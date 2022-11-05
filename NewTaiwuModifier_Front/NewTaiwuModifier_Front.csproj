@@ -40,10 +40,6 @@
       <HintPath>E:\SteamLibrary\steamapps\common\The Scroll Of Taiwu\The Scroll of Taiwu_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="HellowWorldSystem">
-      <HintPath>E:\SteamLibrary\steamapps\workshop\content\838350\2871614134\Plugins\HellowWorldSystem.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -78,11 +74,16 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="FeatureManager.cs" />
-    <Compile Include="FeatureContainerView.cs" />
-    <Compile Include="UI_MainView.cs" />
+    <Compile Include="CharacterModifier.cs" />
+    <Compile Include="AllFeatureView.cs" />
+    <Compile Include="ModifierView.cs" />
+    <Compile Include="TaiwuThief.cs" />
+    <Compile Include="ModifierManager.cs" />
     <Compile Include="NewTaiwuModifier_Front.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
