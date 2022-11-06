@@ -12,6 +12,7 @@ using Redzen.Random;
 using GameData.Common;
 using GameData.Domains.Character.Creation;
 using GameData.Domains.Character.ParallelModifications;
+using GameData.Domains.Organization;
 
 namespace LesLegends
 {
@@ -31,10 +32,11 @@ namespace LesLegends
         }
     }
 
-    [PluginConfig("姬友传说", "EveningTwilight", "1.1.0")]
+    [PluginConfig("姬友传说", "EveningTwilight", "1.1.1")]
     public class LesLegends : TaiwuRemakePlugin
     {
         static Harmony harmony;
+        static Random random;
         /// <summary>
         /// 以下为设置
         static bool closeFriendFixBisexual = false;     // 太吾和谷中密友同性且为双性恋
@@ -50,7 +52,6 @@ namespace LesLegends
         static int minSexHitProb = 20;                  // 同性春宵最低命中率
         static int maxSexHitProb = 20;                  // 同性春宵最高命中率
         public static bool debug = false;               // debug模式 打印日志
-        public static bool pregnantLockProtect;         // 怀孕锁红字保护
         /// </summary>
 
         // static bool forceBisexualAsSame = false;        // 强制双性恋为同性恋(暂不支持)(好像现在就是同，不考虑x生y相的话，没有双[那可真是太棒了])
@@ -73,7 +74,13 @@ namespace LesLegends
             harmony.PatchAll(typeof(LesLegends));
             harmony.PatchAll(typeof(BiSCloseFriendTranspiler));
             harmony.PatchAll(typeof(BisexualLovePatch));
-            harmony.PatchAll(typeof(PregnantLockProtectTranspiler));
+            random = new Random(Environment.TickCount);
+        }
+
+        public override void OnModSettingUpdate()
+        {
+            Logger.DebugLog($"[LesLegends] OnModSettingUpdate");
+            ReadSettings();
         }
 
         public void ReadSettings()
@@ -91,7 +98,6 @@ namespace LesLegends
             DomainManager.Mod.GetSetting(ModIdStr, "minSexHitProb", ref minSexHitProb);
             DomainManager.Mod.GetSetting(ModIdStr, "maxSexHitProb", ref maxSexHitProb);
             DomainManager.Mod.GetSetting(ModIdStr, "debug", ref debug);
-            DomainManager.Mod.GetSetting(ModIdStr, "pregnantLockProtect", ref pregnantLockProtect);
             
             // DomainManager.Mod.GetSetting(ModIdStr, "forceSexualRateForAll", ref forceSexualRateForAll);  // 新生儿概率调整对所有NPC生效
             // DomainManager.Mod.GetSetting(ModIdStr, "forceBisexualAsSame", ref forceBisexualAsSame);      // 强制双性恋为同性恋(暂不支持)
@@ -112,7 +118,6 @@ namespace LesLegends
             Logger.DebugLog(string.Format("[LesLegends] 太吾同性生蛐蛐类型:{0}%", fixCricketLuckType));
             Logger.DebugLog(string.Format("[LesLegends] 同性生殖最低命中率:{0}%", minSexHitProb));
             Logger.DebugLog(string.Format("[LesLegends] 同性生殖最高命中率:{0}%", maxSexHitProb));
-            Logger.DebugLog(string.Format("[LesLegends] {0}启用怀孕锁红字保护", pregnantLockProtect ? "已" : "未"));
         }
 
         // 1.太吾和谷中密友同性且为双性恋
@@ -218,13 +223,6 @@ namespace LesLegends
                 int taiwuId = DomainManager.Taiwu.GetTaiwuCharId();
                 if (father.GetGender() != mother.GetGender())   // 为同性时，才需要修改，尽早返回
                 {
-                    /*if (mother.GetFeatureIds().Contains(Config.CharacterFeature.DefKey.Pregnant))   // 修复一下 已经怀了，别搞了
-                    {
-                        __result = false;
-                        Logger.DebugLog(string.Format("[LesLegends] Skip Fa:{0} Mo:{1} taiwu:{2}", father.GetId(), mother.GetId(), taiwuId));
-                        Traverse.Create(father).Method("OfflineAddFeature", new Type[] { typeof(short), typeof(bool) }).GetValue(Config.CharacterFeature.DefKey.VirginityFalse, true);
-                        return false;
-                    }*/
                     Logger.DebugLog(string.Format("[LesLegends] Ori Fa:{0} Mo:{1} taiwu:{2}", father.GetId(), mother.GetId(), taiwuId));
                     return true;
                 }
@@ -240,9 +238,13 @@ namespace LesLegends
                         (mother, father) = (father, mother);
                     }
                 }
-                if (!keepVirginity)
+                // 只有太吾不破身
+                if (father.GetId() != taiwuId || !keepVirginity)
                 {
                     Traverse.Create(father).Method("OfflineAddFeature", new Type[] { typeof(short), typeof(bool) }).GetValue(Config.CharacterFeature.DefKey.VirginityFalse, true);
+                }
+                if (mother.GetId() != taiwuId || !keepVirginity)
+                { 
                     Traverse.Create(mother).Method("OfflineAddFeature", new Type[] { typeof(short), typeof(bool) }).GetValue(Config.CharacterFeature.DefKey.VirginityFalse, true);
                 }
                 // 本来没怀上 现在怀上了
@@ -340,9 +342,10 @@ namespace LesLegends
             }
         }
 
-        public static sbyte ChangeGender(CharacterDomain domain, int fatherId, Character mother, sbyte originGender)
+        public static sbyte GetRandomGender(IRandomSource random, CharacterDomain domain, int fatherId, Character mother)
         {
-            if (fatherId >= 0)
+            sbyte originGender = random.CheckPercentProb(newBornsFemaleRate) ? Gender.Female : Gender.Male; // 新生儿性别
+            if (sameSexualFromParents && fatherId >= 0) // 有父亲 且 性别遗传
             {
                 Dictionary<int, Character> dic = Traverse.Create(domain).Field("_objects").GetValue<Dictionary<int, Character>>();
                 Character father;
@@ -362,7 +365,7 @@ namespace LesLegends
             MethodBase __originalMethod, IEnumerable<CodeInstruction> instructions)
         {
             /*var __result = new List<CodeInstruction>(instructions);*/
-            /// 第一步，找checkPercentProb，改参数 因为后面的编码会用到CheckPercentProb，会影响定位（懒
+            /// 第一步，找checkPercentProb，改参数 多胞胎性别变化概率与设置的新生儿性别概率有关，越是偏向某种性别，变化概率越小
             instructions = new CodeMatcher(instructions)
                 .MatchForward(false,
                     new CodeMatch(OpCodes.Ldc_I4_S, 25),
@@ -376,53 +379,26 @@ namespace LesLegends
                 ).InstructionEnumeration();
 
             /// 第二步，加上同性别父母时固定子女性别的代码
-            if (sameSexualFromParents)
-            {
-                MethodInfo ChangeGender = AccessTools.Method(typeof(LesLegends), nameof(ChangeGender));
-                instructions = new CodeMatcher(instructions)
-                    .MatchForward(true,
-                        // 匹配 mainChildGender = Gender.GetRandom()
-                        new CodeMatch(OpCodes.Call, typeof(Gender).GetMethod("GetRandom"))
-                    )
-                    .Repeat(matcher => // Do the following for each match
-                        matcher
-                        .Advance(2)
-                        // 先不能移除，因为GetRandom要给后面的逻辑定位用，直接插入
-                        .InsertAndAdvance(
-                            new CodeInstruction[]
-                            {
-                                new CodeInstruction(OpCodes.Ldarg_0, null),                     // CharacterDomain
-                                new CodeInstruction(OpCodes.Ldloc_S, 4),                        // fatherId
-                                new CodeInstruction(OpCodes.Ldarg_2, null),                     // mother
-                                new CodeInstruction(OpCodes.Ldloc_S, 15),                       // mainChildGender
-                                new CodeInstruction(OpCodes.Call, ChangeGender),                // 调方法看是否修改性别结果
-                                new CodeInstruction(OpCodes.Stloc_S, 15),                       // 最终结果赋值
-                            }
-                        )
-                    ).InstructionEnumeration();
-            }
-
-            /// 最后一步，修改性别的随机
-            MethodInfo checkPercentProb = AccessTools.Method(typeof(RedzenHelper), nameof(RedzenHelper.CheckPercentProb),
-                new Type[] { typeof(Redzen.Random.IRandomSource), typeof(Int32) });
+            MethodInfo GetRandomGender = AccessTools.Method(typeof(LesLegends), nameof(GetRandomGender));
             instructions = new CodeMatcher(instructions)
-                .MatchForward(false,
-                    new CodeMatch(OpCodes.Call, typeof(Gender).GetMethod("GetRandom"))  // 找mainChildGender，改掉
+                .MatchForward(true,
+                    // 匹配 mainChildGender = Gender.GetRandom()
+                    new CodeMatch(OpCodes.Call, typeof(Gender).GetMethod("GetRandom"))
                 )
                 .Repeat(matcher => // Do the following for each match
                     matcher
-                    .RemoveInstruction(
-                    )
+                    .RemoveInstruction()
+                    // 先不能移除，因为GetRandom要给后面的逻辑定位用，直接插入
                     .InsertAndAdvance(
                         new CodeInstruction[]
-                        {
-                            // mainChildGender = 【Gender.GetRandom(ramdon) ==> random.CheckPercentProb(100-newBornsFemaleRate) ? 1_Male : 0_Female】 
-                            new CodeInstruction(OpCodes.Ldc_I4_S, 100 - newBornsFemaleRate),
-                            new CodeInstruction(OpCodes.Call, checkPercentProb),
+                        {                                                                   // 前面已经传了 random
+                            new CodeInstruction(OpCodes.Ldarg_0, null),                     // CharacterDomain
+                            new CodeInstruction(OpCodes.Ldloc_S, 4),                        // fatherId
+                            new CodeInstruction(OpCodes.Ldarg_2, null),                     // mother
+                            new CodeInstruction(OpCodes.Call, GetRandomGender),             // 替换随机生成性别的方法
                         }
                     )
                 ).InstructionEnumeration();
-
             return instructions;
 
             /*int i = 0;
@@ -443,7 +419,7 @@ namespace LesLegends
             ref IntelligentCharacterCreationInfo info
             )
         {
-            if (info.Age != 0)  // 不是儿童
+            if (info.Age != 0 && !forceSexualRateForAll)  // 不是儿童 || 新生儿修改全局生效
             {
                 return;
             }
@@ -500,55 +476,23 @@ namespace LesLegends
             }
         }
 
-        //9.怀孕锁红字保护
-        public static class PregnantLockProtectTranspiler
+        //9.新生儿概率调整对所有NPC生效
+        [HarmonyPostfix, HarmonyPatch(typeof(Gender), "GetRandom")]
+        public static void Gender_GetRandom_Postfix(IRandomSource random, ref sbyte __result)
         {
-            public static void SafeAddElement_PregancyLockEndDate(CharacterDomain domain, int elementId, int value, DataContext context)
+            if (forceSexualRateForAll)
             {
-                Dictionary<int, int> pregnancyLockEndDates = Traverse.Create(domain).Field("_pregnancyLockEndDates").GetValue<Dictionary<int, int>>();
-                if (pregnancyLockEndDates.ContainsKey(elementId))
-                {
-                    pregnancyLockEndDates[elementId] = value;
-                }
-                else
-                { 
-                    pregnancyLockEndDates.Add(elementId, value); 
-                }
-            }
-            
-            public static IEnumerable<MethodBase> TargetMethods()
-            {
-                yield return typeof(CharacterDomain).GetMethod("ApplyPregnantStateChange", (BindingFlags)(-1));
-                yield break;
-            }
-            public static IEnumerable<CodeInstruction> Transpiler(MethodBase __originalMethod, IEnumerable<CodeInstruction> instructions)
-            {
-                if (!pregnantLockProtect)
-                {
-                    return instructions;
-                }
-                MethodInfo safeAdd = AccessTools.Method(typeof(PregnantLockProtectTranspiler), nameof(SafeAddElement_PregancyLockEndDate), new Type[] { typeof(CharacterDomain), typeof(int), typeof(int), typeof(DataContext) });
-                instructions = new CodeMatcher(instructions, null).MatchForward(true,   // UseEnd
-                    new CodeMatch[]
-                {
-                    /*new CodeMatch(OpCodes.Ldc_I4_S, 12),
-                    new CodeMatch(OpCodes.Ldc_I4_S, 0x24),
-                    new CodeMatch(OpCodes.Callvirt, typeof(IRandomSource).GetMethod("Next")),*/
-                    new CodeMatch(OpCodes.Add, null),
-                    new CodeMatch(OpCodes.Ldarg_1, null)
-                }).Repeat(matcher => 
-                {
-                    matcher.Advance(1);
-                    matcher.SetInstructionAndAdvance(
-                        new CodeInstruction(OpCodes.Call, safeAdd)
-                    );
-                    Logger.DebugLog(string.Format("[LesLegends] PregnantLockProtectTranspiler success"));
-                }, null).InstructionEnumeration();
-                return instructions;
+                __result = random.CheckPercentProb(newBornsFemaleRate) ? Gender.Female : Gender.Male;
             }
         }
 
-        //9.新生儿概率调整对所有NPC生效
-        //10.双性恋强制变为同性
+        /*[HarmonyPrefix, HarmonyPatch(typeof(OrganizationDomain), "GetCharacterTemplateId")]
+        public static void OrganizationDomain_GetCharacterTemplateId_Prefix(sbyte orgTemplateId, sbyte mapStateTemplateId, ref sbyte gender)
+        {
+            if (forceSexualRateForAll)
+            {
+                gender = random.Next(100) < newBornsFemaleRate ? Gender.Female : Gender.Male;
+            }
+        }*/
     }
 }
