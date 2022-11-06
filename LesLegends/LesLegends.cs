@@ -12,7 +12,11 @@ using Redzen.Random;
 using GameData.Common;
 using GameData.Domains.Character.Creation;
 using GameData.Domains.Character.ParallelModifications;
+using GameData.Domains.World;
+using Config;
+using Character = GameData.Domains.Character.Character;
 using GameData.Domains.Organization;
+using GameData.Domains.Taiwu;
 
 namespace LesLegends
 {
@@ -32,7 +36,7 @@ namespace LesLegends
         }
     }
 
-    [PluginConfig("姬友传说", "EveningTwilight", "1.1.1")]
+    [PluginConfig("姬友传说", "EveningTwilight", "1.1.3")]
     public class LesLegends : TaiwuRemakePlugin
     {
         static Harmony harmony;
@@ -121,32 +125,43 @@ namespace LesLegends
         }
 
         // 1.太吾和谷中密友同性且为双性恋
-        // Transpiler
+        static sbyte GetCloseFriendGender()
+        {
+            Character taiwu = DomainManager.Taiwu.GetTaiwu();
+            sbyte taiwuGender = taiwu.GetGender();
+            return GetCloseFriendGender(taiwuGender);
+        }
+        static sbyte GetCloseFriendGender(sbyte taiwuGender)
+        {
+            return closeFriendFixBisexual ? taiwuGender : Gender.Flip(taiwuGender);
+        }
+        // 开局创建密友-Transpiler
         public static class BiSCloseFriendTranspiler
         {
             public static IEnumerable<MethodBase> TargetMethods()
             {
                 yield return typeof(CharacterDomain).GetMethod("CreateProtagonist", (BindingFlags)(-1));
-                yield return typeof(EventHelper).GetMethod("CreateCloseFriend", (BindingFlags)(-1));
                 yield break;
             }
             public static IEnumerable<CodeInstruction> Transpiler(MethodBase __originalMethod, IEnumerable<CodeInstruction> instructions)
             {
-                if (!closeFriendFixBisexual)
-                {
-                    return instructions;
-                }
-
+                MethodInfo getCloseFriendGender = AccessTools.Method(typeof(LesLegends), "GetCloseFriendGender", new Type[] { typeof(sbyte) });
                 instructions = new CodeMatcher(instructions, null).MatchForward(false, new CodeMatch[]
                 {
                     new CodeMatch(new OpCode?(OpCodes.Call), typeof(Gender).GetMethod("Flip"), null)
-                }).Repeat(delegate (CodeMatcher matcher)
-                {
-                    matcher.RemoveInstruction();
-                    Logger.DebugLog(string.Format("[LesLegends] {0}_Transpiler removeFlip", __originalMethod.Name));
-                }, null).InstructionEnumeration();
+                }).Repeat(matcher =>
+                    matcher.SetInstructionAndAdvance(
+                        new CodeInstruction(OpCodes.Call, getCloseFriendGender)
+                    )
+                ).InstructionEnumeration();
                 return instructions;
             }
+        }
+        // 武林大会创建密友-prefix
+        [HarmonyPrefix, HarmonyPatch(typeof(EventHelper), "CreateCloseFriend")]
+        public static void EventHelper_CreateCloseFriend_Prefix(ref sbyte gender)
+        {
+            gender = GetCloseFriendGender();
         }
 
         [HarmonyPostfix, HarmonyPatch(typeof(CharacterDomain), "CreateCloseFriend")]
@@ -159,8 +174,8 @@ namespace LesLegends
 
             sbyte taiwuGender = DomainManager.Taiwu.GetTaiwu().GetGender();
             sbyte cfGender = __result.GetGender();
-            /*Logger.DebugLog(string.Format("[LesLegends] CharacterDomain_CreateCloseFriend_Postfix didEnter: taiwu:{0}, friend:{{gender:{1}, displayGender:{2},transGender:{3},",
-                taiwuGender, cfGender, __result.GetDisplayingGender(), __result.GetTransgender()));*/
+            Logger.DebugLog(string.Format("[LesLegends] CharacterDomain_CreateCloseFriend_Postfix didEnter: taiwu:{0}, friend:{{gender:{1}, displayGender:{2},transGender:{3},",
+                taiwuGender, cfGender, __result.GetDisplayingGender(), __result.GetTransgender()));
 
             if (taiwuGender != cfGender)
             {
@@ -169,8 +184,8 @@ namespace LesLegends
             }
             Traverse.Create(__result).Field("_bisexual").SetValue(true);
 
-            /*Logger.DebugLog(string.Format("[LesLegends] CharacterDomain_CreateCloseFriend_Postfix willExit: taiwu:{0}, friend:{{gender:{1}, displayGender:{2},transGender:{3},",
-                taiwuGender, __result.GetGender(), __result.GetDisplayingGender(), __result.GetTransgender()));*/
+            Logger.DebugLog(string.Format("[LesLegends] CharacterDomain_CreateCloseFriend_Postfix willExit: taiwu:{0}, friend:{{gender:{1}, displayGender:{2},transGender:{3},",
+                taiwuGender, __result.GetGender(), __result.GetDisplayingGender(), __result.GetTransgender()));
             return __result;
         }
 
@@ -477,6 +492,7 @@ namespace LesLegends
         }
 
         //9.新生儿概率调整对所有NPC生效
+        //9.1 修改性别随机函数
         [HarmonyPostfix, HarmonyPatch(typeof(Gender), "GetRandom")]
         public static void Gender_GetRandom_Postfix(IRandomSource random, ref sbyte __result)
         {
@@ -485,7 +501,77 @@ namespace LesLegends
                 __result = random.CheckPercentProb(newBornsFemaleRate) ? Gender.Female : Gender.Male;
             }
         }
+        //9.2 修改爱侣配偶性别 根据性取向生成
+        static sbyte GetLoverOrSpouseGender(Character character)
+        {
+            if (character.GetBisexual())
+            {
+                return character.GetGender();
+            }
+            return Gender.Flip(character.GetGender());
+        }
+        [HarmonyTranspiler, HarmonyPatch(typeof(OrganizationDomain), "CreateLover")]
+        public static IEnumerable<CodeInstruction> OrganizationDomain_CreateLover_Transpiler(
+            MethodBase __originalMethod, IEnumerable<CodeInstruction> instructions)
+        {
+            MethodInfo getGenderMethod = AccessTools.Method(typeof(LesLegends), nameof(GetLoverOrSpouseGender), new Type[] { typeof(Character) });
+            instructions = new CodeMatcher(instructions)
+                .MatchForward(false,
+                    new CodeMatch(OpCodes.Call, typeof(Gender).GetMethod("Flip"))
+                )
+                .Repeat(matcher => // Do the following for each match
+                    matcher
+                    .Advance(-1)
+                    .RemoveInstructions(2)
+                    .InsertAndAdvance(
+                        new CodeInstruction(OpCodes.Call, getGenderMethod)
+                    )
+                ).InstructionEnumeration();
+            return instructions;
+        }
 
+        [HarmonyTranspiler, HarmonyPatch(typeof(OrganizationDomain), "CreateSpouse")]
+        public static IEnumerable<CodeInstruction> OrganizationDomain_CreateSpouse_Transpiler(
+            MethodBase __originalMethod, IEnumerable<CodeInstruction> instructions)
+        {
+            MethodInfo getGenderMethod = AccessTools.Method(typeof(LesLegends), nameof(GetLoverOrSpouseGender), new Type[] { typeof(Character) });
+            instructions = new CodeMatcher(instructions)
+                .MatchForward(false,
+                    new CodeMatch(OpCodes.Call, typeof(Gender).GetMethod("Flip"))
+                )
+                .Repeat(matcher => // Do the following for each match
+                    matcher
+                    .Advance(-1)
+                    .RemoveInstructions(2)
+                    .InsertAndAdvance(
+                        new CodeInstruction(OpCodes.Call, getGenderMethod)
+                    )
+                ).InstructionEnumeration();
+            return instructions;
+        }
+
+        // 输出一下各个势力的信息
+        /*[HarmonyPrefix, HarmonyPatch(typeof(WorldDomain), "OnLoadWorld")]
+        public static bool WorldDomain_OnLoadWorld_Prefix()
+        {
+            for (int i = 0; i <= 38; ++i)
+            {
+                OrganizationItem orgItem = Organization.Instance.GetItem((sbyte)i);
+                if (orgItem != null)
+                {
+                    Logger.Log(string.Format("[OrganizationPrint]{0}:\n\tDesc:{1}\nGenderRestriction:{2}\tTeachingOutsiderProb:{3}", orgItem.ToString(), orgItem.Desc, orgItem.GenderRestriction, orgItem.TeachingOutsiderProb));
+                    for (int grade = 0; grade < 9; ++grade)
+                    {
+                        short orgMemberId = Organization.Instance[orgItem.TemplateId].Members[grade];
+                        OrganizationMemberItem orgMemberConfig = OrganizationMember.Instance[orgMemberId];
+                        Logger.Log(string.Format("[OrganizationMemberPrint]\t{0}: {1} Gender:{2}", orgMemberConfig.Grade, orgMemberConfig.GradeName, orgMemberConfig.Gender));
+                    }
+                }
+            }
+            return true;
+        }*/
+
+        // 所有人性别修改，但是跟NPC搜索有冲突貌似，新开局需要重新加载后恢复，先不这么搞吧，本身也太粗暴了
         /*[HarmonyPrefix, HarmonyPatch(typeof(OrganizationDomain), "GetCharacterTemplateId")]
         public static void OrganizationDomain_GetCharacterTemplateId_Prefix(sbyte orgTemplateId, sbyte mapStateTemplateId, ref sbyte gender)
         {
